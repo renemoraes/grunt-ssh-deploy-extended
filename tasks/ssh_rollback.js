@@ -13,7 +13,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('ssh_rollback', 'Begin Rollback', function() {
 		this.async();
         var Connection = require('ssh2');
-        var async = require('async');        
+        var async = require('async');
 
         var options = grunt.config.get('environments')[this.args]['options'];
 
@@ -59,6 +59,17 @@ module.exports = function(grunt) {
                 });
             };
 
+            var onBeforeRollback = function(callback){
+                var command = eval(options.before_rollback);
+
+                if(!command){
+                    callback();
+                }
+                grunt.log.subhead("--------------- RUNNING PRE-ROLLBACK COMMANDS");
+                grunt.log.subhead('--- ' + command);;
+                execRemote(command, options.debug, callback);
+            };
+
             var updateSymlink = function(callback) {
                 var delete_symlink = 'rm -rf ' + options.deploy_path + '/' + options.current_symlink;
                 var set_symlink = 'cd ' + options.deploy_path + ' && t=`ls -t1 releases/ | sed -n 2p` && ln -s releases/$t ' + options.current_symlink;
@@ -75,16 +86,29 @@ module.exports = function(grunt) {
                 execRemote(command, options.debug, callback);
             };
 
+            var onAfterRollback = function(callback){
+                var command = eval(options.after_deploy);
+
+                if(!command){
+                    callback();
+                }
+                grunt.log.subhead("--------------- RUNNING POST-ROLLBACK COMMANDS");
+                grunt.log.subhead('--- ' + command);
+                execRemote(command, options.debug, callback);
+            };
+
             // closing connection to remote server
             var closeConnection = function(callback) {
                 connection.end();
 
                 return true;
             };
-    
+
             async.series([
+                onBeforeRollback,
                 updateSymlink,
                 deleteRelease,
+                onAfterRollback,
                 closeConnection
             ]);
         };
