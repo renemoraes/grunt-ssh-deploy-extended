@@ -87,7 +87,7 @@ module.exports = function(grunt) {
             };
 
             var onAfterRollback = function(callback){
-                var command = eval(options.after_deploy);
+                var command = eval(options.after_rollback);
 
                 if(!command){
                     callback();
